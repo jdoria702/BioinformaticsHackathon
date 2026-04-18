@@ -114,7 +114,7 @@
                 // Show typing animation
                 const typingElement = addMessage('', 'assistant', true);
                 
-                const response = await fetch('/chat', {
+                const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -149,6 +149,23 @@
                 sendButton.classList.remove('active');
             }
         }
+
+        // Health check on page load
+        async function checkHealth() {
+            try {
+                const response = await fetch('/api/health')
+                const data = await response.json()
+                if (data.status == 'ok') {
+                    console.log('API is healthy');
+                } else {
+                    console.log('API health check failed')
+                }
+            } catch (e) {
+                console.log('Error checking health: ', e);
+            }
+        }
+
+        checkHealth();
         
         messageInput.addEventListener('input', updateSendButtonState);
         messageInput.addEventListener('keyup', updateSendButtonState);
