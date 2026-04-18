@@ -1,6 +1,6 @@
-import logging
-
 from __future__ import annotations
+
+import logging
 
 from dataclasses import dataclass
 from typing import Dict, List
@@ -43,3 +43,9 @@ class SessionService:
             })
         
         return chat_history
+
+    # Allow the agent to append chat history to the session:
+    def append(self, session_id: str, role: str, content: str) -> None:
+        self._sessions.setdefault(session_id, []).append(ChatMessage(role=role, content=content))
+        logger.debug("Appended message to session '%s' (role=%s).", session_id, role)
+        
