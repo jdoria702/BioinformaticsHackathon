@@ -43,7 +43,7 @@ def chat():
         return jsonify(result)
     except Exception:
         logger.exception("Error while handling /chat (session_id=%s, topic=%s)", session_id, topic)
-        return jsonify({"error:": "Internal server error."}), 500
+        return jsonify({"error": "Internal server error."}), 500
 
 # File upload endpoint for user-specific documents:
 @api_bp.route("/upload", methods=["POST"])
