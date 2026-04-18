@@ -119,7 +119,7 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ message: message }),
+                    body: JSON.stringify({ message: message, session_id: "default", topic: "sequence_alignment" }),
                 });
                 const data = await response.json();
                 

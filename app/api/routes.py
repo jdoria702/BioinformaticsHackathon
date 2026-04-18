@@ -1,6 +1,6 @@
 import logging
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, render_template, request, jsonify
 from app.agent.tutor_agent import BioTutorAgent
 
 # Create logger:
@@ -17,6 +17,10 @@ try:
 except Exception:
     logger.exception("BioTutorAgent failed to initialize (fail-fast).")
     raise
+
+@api_bp.route("/")
+def index():
+    return render_template("index.html")
 
 # Simple health check to see if the application is running and functioning properly:
 @api_bp.route("/health", methods=["GET"])
