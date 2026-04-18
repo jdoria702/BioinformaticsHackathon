@@ -29,7 +29,6 @@ def _configure_logging():
 
 # Function that creates + starts our application:
 def create_app():
-
     # Start the logger:
     _configure_logging()
     logger.info("Starting Flask app creation...")
