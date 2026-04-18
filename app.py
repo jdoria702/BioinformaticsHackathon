@@ -46,7 +46,6 @@ def create_app():
     return app
 
 if __name__ == "__main__":
-    app = create_app()
+    app = create_app() 
     logger.info("Running development server (debug=%s)", True)
     app.run(debug=True)
-
