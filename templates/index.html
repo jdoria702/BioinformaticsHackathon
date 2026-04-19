@@ -126,7 +126,7 @@
                 // Remove typing element and add typed response
                 typingElement.remove();
                 const responseElement = addMessage('', 'assistant');
-                await typeMessage(responseElement, data.response);
+                await typeMessage(responseElement, data.answer);
             } catch (error) {
                 const errorElement = addMessage('', 'assistant');
                 await typeMessage(errorElement, 'Error: Could not send message.');
