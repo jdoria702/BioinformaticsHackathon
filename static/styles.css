@@ -16,6 +16,13 @@ body {
     padding: 12px 24px;
     background-color: #1C2541;
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    z-index: 10;
+    box-sizing: border-box;
 }
 
 .navbar-home-link {
@@ -46,6 +53,47 @@ body {
     cursor: pointer;
 }
 
+.intro-message {
+    font-size: 3rem;
+    margin-top: 25vh;
+    font-family: 'Roboto', sans-serif;
+}
+
+.home-page {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding: 20px;
+    padding-top: 80px;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 2;
+}
+
+.dna-bg {
+    position: fixed;
+    top: 50%;
+    right: -38vw;
+    left: auto;
+
+    width: 95vw;
+    height: 120vh;
+
+    transform: translateY(-50%) rotate(90deg) scale(0.9);
+
+    overflow: hidden;
+    opacity: 0.08;
+    z-index: 0;
+    pointer-events: none;
+
+    filter: invert(62%) sepia(98%) saturate(2776%) hue-rotate(173deg) brightness(105%) contrast(104%) blur(1px);
+}
+
 .app-layout {
     display: flex;
     gap: 20px;
@@ -56,46 +104,105 @@ body {
     width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
+    margin-top: 60px;
+    height: calc(100vh - 60px);
+    overflow: hidden;
 }
 
-.sidebar {
-    width: 260px;
-    flex-shrink: 0;
-}
-
-.sidebar-card {
-    background-color: #131a35;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 24px;
-    padding: 24px;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-}
-
-.sidebar-card h2 {
-    font-size: 1rem;
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    color: #6FFFE9;
+.suggested-prompts {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
     margin-bottom: 16px;
+    align-items: flex-start;
+}
+
+.suggested-prompt {
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    background: rgba(255, 255, 255, 0.06);
+    color: white;
+    padding: 10px 14px;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.suggested-prompt:hover {
+    background: rgba(4, 217, 255, 0.12);
+    transform: translateY(-1px);
 }
 
 .featured-topics {
     list-style: none;
     padding: 0;
+    padding-bottom: 40px;
     margin: 0;
+    margin-top: 20vh;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
+    gap: 36px;
 }
 
 .featured-topics li {
-    padding: 12px 14px;
+    font-family: 'Roboto', sans-serif;
+    position: relative;
+    padding: 20px 20px 56px;
     border-radius: 16px;
-    background-color: rgba(255, 255, 255, 0.04);
+    background-color: rgba(255, 255, 255, 0);
     color: #FFFFFF;
-    font-size: 0.96rem;
+    font-size: 1rem;
     line-height: 1.4;
     cursor: pointer;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    transition: transform 0.22s ease, box-shadow 0.22s ease;
+}
+
+.featured-topics li::after {
+    content: "";
+    position: absolute;
+    right: 14px;
+    bottom: 12px;
+    width: 72px;
+    height: 72px;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.25;
+}
+
+.topic.genome_assembly::after {
+    background-image: url("images/genome_assembly_icon.png");
+}
+
+.topic.sequence_alignment::after {
+    background-image: url("images/sequence_alignment_icon.png");
+}
+
+.topic.variant_calling::after {
+    background-image: url("images/variant_calling_icon.webp");
+}
+
+.topic.transcriptomics::after {
+    background-image: url("images/transcriptomics_icon.png");
+}
+
+.topic.protein_structure::after {
+    background-image: url("images/protein_structure_icon.png");
+}
+
+.topic.phylogenetics::after {
+    background-image: url("images/phylogenetics_icon.png");
+}
+
+.featured-topics li:hover {
+    transform: scale(1.05);
+    box-shadow: 0 12px 26px rgba(80, 210, 120, 0.45);
+}
+
+.featured-topics li:hover::after {
+    opacity: 1;
 }
 
 .chat-panel {
@@ -112,34 +219,10 @@ body {
     min-height: 0;
     min-width: 0;
     overflow-y: auto;
-    padding: 0px;
+    padding: 24px 0;
     width: 100%;
     display: flex;
     flex-direction: column;
-}
-
-.input-container {
-    display: flex;
-    padding: 18px 20px;
-    background-color: #1C2541;
-    border-top: 1px solid #0B132B;
-    max-width: 800px;
-    margin: 0 auto 20px;
-    width: 100%;
-    border-radius: 0 0 24px 24px;
-    min-width: 0;
-}
-
-#message-input {
-    flex: 1;
-    min-width: 0;
-    padding: 14px 16px;
-    border: 1px solid #26426E;
-    background-color: #0B132B;
-    border-radius: 999px;
-    margin-right: 12px;
-    font-size: 16px;
-    color: #FFFFFF;
 }
 
 .message {
@@ -167,11 +250,8 @@ body {
 
 .input-container {
     display: flex;
-    padding: 18px 20px;
-    background-color: #1C2541;
-    border-top: 1px solid #0B132B;
     max-width: 800px;
-    margin: 0 auto 20px;
+    margin: 0 auto;
     width: 100%;
     border-radius: 0 0 24px 24px;
 }
@@ -187,6 +267,54 @@ body {
     margin: auto;
 }
 
+#notification-container {
+    font-style: italic;
+    padding-left: 8px;
+    margin-bottom: 24px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto 12px;
+}
+
+.upload-actions {
+    display: flex;
+    gap: 10px;
+    padding-left: 8px;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto 12px;
+}
+
+#confirm-upload-button,
+#cancel-upload-button {
+    padding: 10px 16px;
+    border: none;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#confirm-upload-button {
+    background-color: #5BC0BE;
+    color: #0B132B;
+}
+
+#confirm-upload-button:hover {
+    background-color: #6FFFE9;
+}
+
+#cancel-upload-button {
+    background-color: #7A8499;
+    color: #FFFFFF;
+}
+
+#cancel-upload-button:hover {
+    background-color: #8A95AB;
+}
+
 #message-input {
     flex: 1;
     padding: 14px 16px;
@@ -196,6 +324,14 @@ body {
     margin-right: 12px;
     font-size: 16px;
     color: #FFFFFF;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#message-input:focus,
+#message-input:focus-visible {
+    border-color: #37d6c8;
+    box-shadow: 0 0 0 2px rgba(55, 214, 200, 0.25);
+    outline: none;
 }
 
 #message-input::placeholder {
@@ -231,6 +367,24 @@ body {
 #send-button svg {
     width: 20px;
     height: 20px;
+}
+
+#upload-button {
+    padding: 14px 20px;
+    background-color: rgba(255, 255, 255, 0.829);
+    color: rgb(0, 0, 0);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 8px;
+}
+
+#upload-button:hover {
+    background-color: rgba(255, 255, 255, 0.993);
 }
 
 @keyframes typing {
