@@ -8,8 +8,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
 </head>
 <body>
+    <lottie-player 
+        src="{{ url_for('static', filename='animations/Helix.json') }}"
+        background="transparent"
+        speed="0.5"
+        loop
+        autoplay
+        class="dna-bg">
+    </lottie-player>
     <header class="navbar">
         <a href="/" class="navbar-home-link">
             <div class="navbar-brand">
@@ -18,16 +27,22 @@
             </div>
         </a>
     </header>
-    <main class="app-layout">
+    <main class="home-page">
             <div class="grid-topics">
-                <h2>What Bioinformatics Topic is on the Agenda?</h2>
+                <h2 class="intro-message">What Bioinformatics Topic is on the Agenda?</h2>
+                <h3 class="description">Select an AI Agent specialized in the following fields to get started!</h3>
                 <ul class="featured-topics">
-                    <li data-topic="genome_assembly">Genome Assembly</li>
-                    <li data-topic="sequence_alignment" class="selected">Sequence Alignment</li>
-                    <li data-topic="variant_calling">Variant Calling</li>
-                    <li data-topic="transcriptomics">Transcriptomics</li>
-                    <li data-topic="protein_structure">Protein Structure</li>
-                    <li data-topic="phylogenetics">Phylogenetics</li>
+                    <li class="topic genome_assembly">Genome Assembly</li>
+                    <li class="topic sequence_alignment">Sequence Alignment</li>
+                    <li class="topic variant_calling">Variant Calling</li>
+                    <li class="topic transcriptomics">Transcriptomics</li>
+                    <li class="topic protein_structure">Protein Structure</li>
+                    <li class="topic phylogenetics">Phylogenetics</li>
+                    <li class="topic phylogenetics">Phylogenetics</li>
+                    <li class="topic phylogenetics">Phylogenetics</li>
+                    <li class="topic phylogenetics">Phylogenetics</li>
+                    <li class="topic phylogenetics">Phylogenetics</li>
+                    <li class="topic phylogenetics">Phylogenetics</li>
                 </ul>
             </div>
     </main>

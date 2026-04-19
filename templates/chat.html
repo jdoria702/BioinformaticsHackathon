@@ -22,13 +22,32 @@
         <section class="chat-panel">
             <div class="chat-container" id="chat-container">
                 <div class="message assistant" id="welcome-message">Welcome to BioinfoAI! How can I help you today?</div>
+                <div id="suggested-prompts" class="suggested-prompts"></div>
+            </div>
+            <div class="notification-container" id="notification-container"></div>
+            <div class="upload-actions" id="upload-actions" style="display: none;">
+                <button id="confirm-upload-button" type="button">Upload</button>
+                <button id="cancel-upload-button" type="button">Cancel</button>
             </div>
             <div class="input-container">
                 <input type="text" id="message-input" placeholder="Type your message here...">
+                <input 
+                    type="file" 
+                    id="file-input"
+                    accept=".png,.jpg,.jpeg,.tif,.tiff,.bmp,.pdf,.docx"
+                    style="display: none;"
+                >
                 <button id="send-button">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <line x1="12" y1="19" x2="12" y2="5"></line>
                         <polyline points="5 12 12 5 19 12"></polyline>
+                    </svg>
+                </button>
+                <button id="upload-button" type="button" aria-label="Upload file">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
                 </button>
             </div>
@@ -37,11 +56,62 @@
 
     <script>
         const chatContainer = document.getElementById('chat-container');
+        const notificationContainer = document.getElementById('notification-container')
         const messageInput = document.getElementById('message-input');
         const sendButton = document.getElementById('send-button');
         let firstMessageSent = false;
         const urlParams = new URLSearchParams(window.location.search);
         const selectedTopic = urlParams.get('topic') || 'sequence_alignment';
+        let sessionId = sessionStorage.getItem('bio_session_id')
+        const fileInput = document.getElementById('file-input');
+        const uploadButton = document.getElementById('upload-button');
+        const uploadActions = document.getElementById('upload-actions');
+        const confirmUploadButton = document.getElementById('confirm-upload-button');
+        const cancelUploadButton = document.getElementById('cancel-upload-button');
+        
+        const promptSuggestions = {
+            genome_assembly: [
+                "What is genome assembly?",
+                "What is the difference between de novo and reference-guided assembly?",
+                "Why are contigs and scaffolds important?",
+                "What challenges make genome assembly difficult?"
+            ],
+            sequence_alignment: [
+                "What is sequence alignment?",
+                "What is the difference between global and local alignment?",
+                "How does the Needleman-Wunsch algorithm work?",
+                "Why are gaps used in sequence alignment?"
+            ],
+            variant_calling: [
+                "What is variant calling?",
+                "What is the difference between SNPs and indels?",
+                "How do sequencing errors affect variant calling?",
+                "What does read depth mean in variant calling?"
+            ],
+            transcriptomics: [
+                "What is transcriptomics?",
+                "What can RNA-seq tell us?",
+                "What is differential gene expression?",
+                "Why is normalization important in transcriptomics?"
+            ],
+            protein_structure: [
+                "What is protein structure?",
+                "What are the four levels of protein structure?",
+                "Why does protein folding matter?",
+                "How do scientists predict protein structure?"
+            ],
+            phylogenetics: [
+                "What is phylogenetics?",
+                "How are phylogenetic trees built?",
+                "What is the difference between rooted and unrooted trees?",
+                "Why is multiple sequence alignment important for phylogenetics?"
+            ]
+        };
+
+        if (!sessionId) {
+            sessionId = crypto.randomUUID();
+            sessionStorage.setItem('bio_session_id', sessionId);
+        }
 
         const readableTopic = selectedTopic
             .replace(/_/g, ' ')
@@ -53,13 +123,44 @@
         if (welcomeMessage) {
             welcomeMessage.textContent = dynamicTitle;
         }
+        renderSuggestedPrompts();
+
+        uploadButton.addEventListener('click', () => {
+            fileInput.value = '';
+            fileInput.click();
+        })
+
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            notificationContainer.textContent = `Would you like to upload: ${file.name}`;
+            uploadActions.style.display = 'flex';
+        })
+
+        confirmUploadButton.addEventListener('click', async () => {
+            uploadActions.style.display = 'none';
+            await uploadImage();
+        });
+
+        cancelUploadButton.addEventListener('click', () => {
+            fileInput.value = '';
+            notificationContainer.textContent = 'Upload canceled.';
+            uploadActions.style.display = 'none';
+        });
 
         function removeWelcomeMessage() {
             const welcomeMsg = document.getElementById('welcome-message');
             if (welcomeMsg) {
                 welcomeMsg.remove();
-                firstMessageSent = true;
             }
+            
+            const promptBox = document.getElementById('suggested-prompts');
+            if (promptBox) {
+                promptBox.remove();
+            }
+
+            firstMessageSent = true;
         }
 
         function addMessage(content, sender, isTyping = false) {
@@ -121,18 +222,50 @@
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ message: message, session_id: "default", topic: selectedTopic }),
+                    body: JSON.stringify({ message: message, session_id: sessionId, topic: selectedTopic }),
                 });
                 const data = await response.json();
                 
                 // Remove typing element and add typed response
                 typingElement.remove();
                 const responseElement = addMessage('', 'assistant');
+                console.log(message)
                 console.log(selectedTopic)
                 await typeMessage(responseElement, data.answer);
             } catch (error) {
                 const errorElement = addMessage('', 'assistant');
                 await typeMessage(errorElement, 'Error: Could not send message.');
+            }
+        }
+
+        async function uploadImage() {
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('session_id', sessionId);
+
+            try {
+                notificationContainer.textContent = `Uploading: ${file.name}...`;
+
+                const response = await fetch('/api/upload', {
+                    method: 'POST',
+                    body: formData,
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    notificationContainer.textContent = `Upload failed: ${data.error || "Unknown error"}`;
+                    return;
+                }
+
+                notificationContainer.textContent = `Uploaded: ${data.original_filename}`;
+                fileInput.value = '';
+            } catch (error) {
+                notificationContainer.textContent = 'Upload failed: Network or server error.';
+                fileInput.value = '';
             }
         }
 
@@ -151,6 +284,33 @@
             } else {
                 sendButton.classList.remove('active');
             }
+        }
+
+        function renderSuggestedPrompts() {
+            const promptContainer = document.getElementById('suggested-prompts');
+            if (!promptContainer) return;
+
+            const prompts = promptSuggestions[selectedTopic] || [
+                `What is ${readableTopic}?`,
+                `Why is ${readableTopic} important?`,
+                `What are common methods used in ${readableTopic}?`
+            ];
+
+            promptContainer.innerHTML = '';
+
+            prompts.forEach((prompt) => {
+                const button = document.createElement('button');
+                button.className = 'suggested-prompt';
+                button.textContent = prompt;
+
+                button.addEventListener('click', () => {
+                    messageInput.value = prompt;
+                    updateSendButtonState();
+                    messageInput.focus();
+                });
+
+                promptContainer.appendChild(button);
+            });
         }
 
         // Health check on page load
