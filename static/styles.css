@@ -18,6 +18,12 @@ body {
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.navbar-home-link {
+    text-decoration: none;
+    color: inherit;
+    display: inline-flex;
+}
+
 .navbar-brand {
     display: flex;
     align-items: center;
@@ -77,20 +83,19 @@ body {
     list-style: none;
     padding: 0;
     margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
 }
 
 .featured-topics li {
-    margin-bottom: 12px;
     padding: 12px 14px;
     border-radius: 16px;
     background-color: rgba(255, 255, 255, 0.04);
     color: #FFFFFF;
     font-size: 0.96rem;
     line-height: 1.4;
-}
-
-.featured-topics li:last-child {
-    margin-bottom: 0;
+    cursor: pointer;
 }
 
 .chat-panel {
