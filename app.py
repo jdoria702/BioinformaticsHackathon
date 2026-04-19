@@ -40,6 +40,15 @@ def create_app():
     app.register_blueprint(api_bp, url_prefix="/api")
     logger.info("Registered blueprint: api_bp at url_prefix=/api")
 
+    @app.route("/")
+    def root():
+        return render_template("index.html")
+    
+    @app.route("/chat")
+    def chat_page():
+        topic = request.args.get("topic", "sequence_alignment")
+        return render_template("chat.html", topic=topic)
+
     logger.info("App creation completed.")
 
     return app
