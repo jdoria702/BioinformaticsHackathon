@@ -22,8 +22,8 @@ def build_tutor_prompt(topic: str, lesson_context: str, history, user_message: s
     logger.info("Building tutor prompt...")
 
     # Check if we have history to retrieve:
-    logger.debug("No chat history provided.")
     if not history:
+        logger.debug("No chat history provided.")
         history_text = ""
     else:
         logger.debug(f"Formatting chat history with {len(history)} messages.")
