@@ -57,6 +57,12 @@ class ChromaRetriever:
             logger.debug("No text passed to add_chunks().")
             return 0
 
+        # Ensure ids exist (Chroma requires ids)
+        if ids is None:
+            ids = [str(uuid.uuid4()) for _ in texts]
+        elif len(ids) != len(texts):
+            raise ValueError("ids length must match texts length")
+
         # We should update the metadatas whenever we add chunks:
         def normalize_metadatas(texts, metadatas=None):
 

@@ -21,9 +21,21 @@ class BioTutorAgent:
         logger.debug("Fetching history...")
         history = self.session_service.get_history(session_id) 
 
-        # Our agent should also remember what the lesson the user requested was about:
+        # Base topic context (hardcoded):
         logger.debug("Fetching lesson context...")
         lesson_context = self.lesson_service.get_topic_context(topic)
+
+        # Retrieved context (per-session docs):
+        logger.debug("Retrieving per-session context...")
+        retrieval_query = f"{topic}\n{user_message}".strip()
+        retrieved_context = self.lesson_service.get_retrieved_context(
+            query_text=retrieval_query,
+            session_id=session_id,
+            k=4,
+        )
+
+        if retrieved_context:
+            lesson_context = f"{lesson_context}\n\nRetrieved context (user docs):\n{retrieved_context}".strip()
 
         # Create the prompt that is passed to the agent:
         logger.debug("Building prompt...")
