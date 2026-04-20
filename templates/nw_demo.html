@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Needleman–Wunsch Demo | BioinfoAI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/" class="navbar-home-link">
+            <div class="navbar-brand">
+                <img src="{{ url_for('static', filename='images/BioinfoAIIcon.png') }}" alt="BioinfoAI icon" class="navbar-icon">
+                <span class="navbar-title">BioinfoAI</span>
+            </div>
+        </a>
+    </header>
+
+    <main class="nw-page">
+        <div class="nw-page-header">
+            <div>
+                <h1 class="nw-page-title">Needleman–Wunsch (Global Alignment)</h1>
+                <p class="nw-page-subtitle">Interactively build the DP matrix, practice filling hidden cells, then view traceback + final alignment.</p>
+            </div>
+            <div class="nw-page-actions">
+                <a class="demo-link" href="/demos">← Back to demos</a>
+            </div>
+        </div>
+
+        <section class="nw-standalone" aria-label="Needleman–Wunsch demo">
+            <div class="nw-header">
+                <div>
+                    <div class="nw-title">Practice Mode</div>
+                    <div class="nw-subtitle">Fill the DP matrix and test yourself</div>
+                </div>
+                <button id="nw-toggle" class="nw-toggle" type="button" aria-expanded="true">Hide</button>
+            </div>
+
+            <div id="nw-body" class="nw-body">
+                <div class="nw-card">
+                    <div class="nw-form">
+                        <label class="nw-label" for="nw-seq-a">Sequence A</label>
+                        <input id="nw-seq-a" class="nw-input" type="text" value="GATTACA">
+
+                        <label class="nw-label" for="nw-seq-b">Sequence B</label>
+                        <input id="nw-seq-b" class="nw-input" type="text" value="GCATGCU">
+
+                        <div class="nw-grid-3">
+                            <div>
+                                <label class="nw-label" for="nw-match">Match</label>
+                                <input id="nw-match" class="nw-input" type="number" value="1" step="1">
+                            </div>
+                            <div>
+                                <label class="nw-label" for="nw-mismatch">Mismatch</label>
+                                <input id="nw-mismatch" class="nw-input" type="number" value="-1" step="1">
+                            </div>
+                            <div>
+                                <label class="nw-label" for="nw-gap">Gap</label>
+                                <input id="nw-gap" class="nw-input" type="number" value="-2" step="1">
+                            </div>
+                        </div>
+
+                        <div class="nw-actions">
+                            <button id="nw-build" class="nw-primary" type="button">Build matrix</button>
+                            <button id="nw-practice" class="nw-secondary" type="button">Practice mode</button>
+                            <button id="nw-traceback" class="nw-tertiary" type="button">Show traceback</button>
+                        </div>
+
+                        <div class="nw-help">
+                            Practice mode quizzes every DP cell (row/col 1..n,m) in order. For each cell, enter the DP value and select the traceback direction (diag/up/left).
+                        </div>
+                    </div>
+
+                    <div class="nw-output">
+                        <div class="nw-output-title">DP Matrix</div>
+                        <!-- Validation / runtime errors appear here -->
+                        <div id="nw-error" class="nw-inline-error" role="alert" style="display:none;"></div>
+                        <div id="nw-matrix" class="nw-matrix" role="region" aria-label="DP matrix"></div>
+                    </div>
+
+                    <div class="nw-output">
+                        <div class="nw-output-title">Quiz</div>
+                        <div id="nw-quiz" class="nw-quiz">(start practice mode)</div>
+                    </div>
+
+                    <div class="nw-output">
+                        <div class="nw-output-title">Alignment</div>
+                        <pre id="nw-alignment" class="nw-alignment">(run Show traceback)</pre>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // ------------------------------
+        // Needleman–Wunsch interactive demo (standalone)
+        // ------------------------------
+
+        // Core NW implementation (compute DP + pointers + rendering)
+        function nwCompute(a, b, match, mismatch, gap) {
+            const sA = String(a ?? '');
+            const sB = String(b ?? '');
+            const n = sA.length;
+            const m = sB.length;
+
+            const dp = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0));
+            const ptr = Array.from({ length: n + 1 }, () => Array(m + 1).fill(''));
+
+            dp[0][0] = 0;
+            ptr[0][0] = '';
+
+            for (let i = 1; i <= n; i++) {
+                dp[i][0] = dp[i - 1][0] + gap;
+                ptr[i][0] = 'U';
+            }
+            for (let j = 1; j <= m; j++) {
+                dp[0][j] = dp[0][j - 1] + gap;
+                ptr[0][j] = 'L';
+            }
+
+            for (let i = 1; i <= n; i++) {
+                for (let j = 1; j <= m; j++) {
+                    const diag = dp[i - 1][j - 1] + (sA[i - 1] === sB[j - 1] ? match : mismatch);
+                    const up = dp[i - 1][j] + gap;
+                    const left = dp[i][j - 1] + gap;
+
+                    let best = diag;
+                    let p = 'D';
+                    if (up > best) { best = up; p = 'U'; }
+                    if (left > best) { best = left; p = 'L'; }
+
+                    dp[i][j] = best;
+                    ptr[i][j] = p;
+                }
+            }
+
+            return { a: sA, b: sB, dp, ptr, match, mismatch, gap };
+        }
+
+        function nwRender(model, opts = {}) {
+            if (!nwMatrix) return;
+            const hiddenCells = opts.hiddenCells ?? new Set();
+            const highlightPath = opts.highlightPath ?? new Set();
+            const quizCell = opts.quizCell ?? null;
+
+            const a = model.a;
+            const b = model.b;
+            const dp = model.dp;
+            const ptr = model.ptr;
+
+            const table = document.createElement('table');
+            table.className = 'nw-table';
+
+            // Header row: (blank, blank, b chars...)
+            const header = document.createElement('tr');
+            header.appendChild(document.createElement('th'));
+            header.appendChild(document.createElement('th'));
+            for (let j = 0; j < b.length; j++) {
+                const th = document.createElement('th');
+                th.textContent = b[j];
+                header.appendChild(th);
+            }
+            table.appendChild(header);
+
+            for (let i = 0; i < dp.length; i++) {
+                const tr = document.createElement('tr');
+
+                const rowLabel = document.createElement('th');
+                rowLabel.textContent = i === 0 ? '' : a[i - 1];
+                tr.appendChild(rowLabel);
+
+                for (let j = 0; j < dp[i].length; j++) {
+                    const td = document.createElement('td');
+                    const key = `${i},${j}`;
+                    td.dataset.cell = key;
+
+                    const isHidden = hiddenCells.has(key);
+                    const isPath = highlightPath.has(key);
+                    const isQuiz = quizCell === key;
+
+                    td.className = 'nw-cell';
+                    if (isHidden) td.classList.add('nw-hidden');
+                    if (isPath) td.classList.add('nw-path');
+                    if (isQuiz) td.classList.add('nw-quizcell');
+
+                    if (!isHidden) {
+                        const val = document.createElement('div');
+                        val.className = 'nw-val';
+                        val.textContent = String(dp[i][j]);
+                        td.appendChild(val);
+                    } else {
+                        td.textContent = '?';
+                    }
+
+                    tr.appendChild(td);
+                }
+                table.appendChild(tr);
+            }
+
+            nwMatrix.innerHTML = '';
+            nwMatrix.appendChild(table);
+        }
+
+        function nwPath(model) {
+            const path = new Set();
+            let i = model.dp.length - 1;
+            let j = model.dp[0].length - 1;
+            path.add(`${i},${j}`);
+
+            while (i > 0 || j > 0) {
+                const p = model.ptr[i][j];
+                if (p === 'D') { i -= 1; j -= 1; }
+                else if (p === 'U') { i -= 1; }
+                else if (p === 'L') { j -= 1; }
+                else break;
+                path.add(`${i},${j}`);
+            }
+            return path;
+        }
+
+        function nwDoTraceback(model) {
+            const a = model.a;
+            const b = model.b;
+            let i = model.dp.length - 1;
+            let j = model.dp[0].length - 1;
+
+            const outA = [];
+            const outB = [];
+            const mid = [];
+
+            while (i > 0 || j > 0) {
+                const p = model.ptr[i][j];
+                if (p === 'D') {
+                    const ca = a[i - 1];
+                    const cb = b[j - 1];
+                    outA.push(ca);
+                    outB.push(cb);
+                    mid.push(ca === cb ? '|' : '.');
+                    i -= 1;
+                    j -= 1;
+                } else if (p === 'U') {
+                    const ca = a[i - 1];
+                    outA.push(ca);
+                    outB.push('-');
+                    mid.push(' ');
+                    i -= 1;
+                } else {
+                    const cb = b[j - 1];
+                    outA.push('-');
+                    outB.push(cb);
+                    mid.push(' ');
+                    j -= 1;
+                }
+            }
+
+            outA.reverse();
+            outB.reverse();
+            mid.reverse();
+
+            return {
+                score: model.dp[model.dp.length - 1][model.dp[0].length - 1],
+                alA: outA.join(''),
+                alB: outB.join(''),
+                mid: mid.join(''),
+            };
+        }
+
+        const nwToggle = document.getElementById('nw-toggle');
+        const nwBody = document.getElementById('nw-body');
+        nwToggle?.addEventListener('click', () => {
+            const isHidden = nwBody.classList.toggle('hidden');
+            nwToggle.textContent = isHidden ? 'Show' : 'Hide';
+            nwToggle.setAttribute('aria-expanded', String(!isHidden));
+        });
+
+        const nwSeqA = document.getElementById('nw-seq-a');
+        const nwSeqB = document.getElementById('nw-seq-b');
+        const nwMatch = document.getElementById('nw-match');
+        const nwMismatch = document.getElementById('nw-mismatch');
+        const nwGap = document.getElementById('nw-gap');
+        const nwBuild = document.getElementById('nw-build');
+        const nwPractice = document.getElementById('nw-practice');
+        const nwTraceback = document.getElementById('nw-traceback');
+        const nwMatrix = document.getElementById('nw-matrix');
+        const nwQuiz = document.getElementById('nw-quiz');
+        const nwAlignment = document.getElementById('nw-alignment');
+        const nwError = document.getElementById('nw-error');
+
+        function nwCleanSeq(raw) {
+            if (!raw) return '';
+            return raw
+                .split(/\r?\n/)
+                .filter(line => !line.trim().startsWith('>'))
+                .join('')
+                .replace(/[^a-zA-Z]/g, '')
+                .toUpperCase();
+        }
+
+        function nwShowQuizMessage(message, tone = 'nw-warn') {
+            if (!nwQuiz) return;
+            nwQuiz.innerHTML = `<div class="nw-quiz-feedback ${tone}">${message}</div>`;
+        }
+
+        function nwParseScoring() {
+            const matchRaw = nwMatch?.value;
+            const mismatchRaw = nwMismatch?.value;
+            const gapRaw = nwGap?.value;
+
+            const match = Number(matchRaw);
+            const mismatch = Number(mismatchRaw);
+            const gap = Number(gapRaw);
+
+            if (!Number.isFinite(match) || !Number.isFinite(mismatch) || !Number.isFinite(gap)) {
+                return { ok: false, error: 'Scoring inputs must be numbers (match/mismatch/gap).' };
+            }
+            return { ok: true, match, mismatch, gap };
+        }
+
+        function nwValidateInputs() {
+            const a = nwCleanSeq(nwSeqA?.value ?? '');
+            const b = nwCleanSeq(nwSeqB?.value ?? '');
+
+            if (!a || !b) {
+                return { ok: false, error: 'Please enter both Sequence A and Sequence B.' };
+            }
+            if (a.length > 60 || b.length > 60) {
+                return { ok: false, error: 'Sequences are too long for the demo. Please keep each ≤ 60 characters.' };
+            }
+
+            // Basic alphabet sanity (still allows protein letters if needed)
+            if (!/^[A-Z]+$/.test(a) || !/^[A-Z]+$/.test(b)) {
+                return { ok: false, error: 'Sequences may only contain letters A–Z.' };
+            }
+
+            const scoring = nwParseScoring();
+            if (!scoring.ok) {
+                return scoring;
+            }
+
+            return { ok: true, a, b, match: scoring.match, mismatch: scoring.mismatch, gap: scoring.gap };
+        }
+
+        // Practice state (step-by-step through all cells)
+        let nwPracticeActive = false;
+        let nwProgress = { i: 1, j: 1, correct: 0, total: 0 };
+
+        // Track which cells were already completed so Reveal/Check can't double-count.
+        let nwCompletedCells = new Set();
+
+        function nwSetError(message) {
+            if (!nwError) return;
+            if (!message) {
+                nwError.style.display = 'none';
+                nwError.textContent = '';
+                return;
+            }
+            nwError.textContent = message;
+            nwError.style.display = 'block';
+        }
+
+        function nwBuildModel() {
+            const v = nwValidateInputs();
+            if (!v.ok) {
+                nwModel = null;
+                nwHidden = new Set();
+                nwPracticeActive = false;
+                nwCompletedCells = new Set();
+                nwProgress = { i: 1, j: 1, correct: 0, total: 0 };
+                nwAlignment.textContent = '(run Show traceback)';
+                // Keep the last-rendered matrix visible (don’t blank the page).
+                nwSetError(v.error);
+                nwShowQuizMessage(v.error, 'nw-warn');
+                return;
+            }
+
+            nwSetError('');
+
+            nwModel = nwCompute(v.a, v.b, v.match, v.mismatch, v.gap);
+            nwHidden = new Set();
+            nwPracticeActive = false;
+            nwCompletedCells = new Set();
+            nwProgress = { i: 1, j: 1, correct: 0, total: 0 };
+            nwQuiz.textContent = '(start practice mode)';
+            nwAlignment.textContent = '(run Show traceback)';
+            nwRender(nwModel);
+        }
+
+        function nwKey(i, j) { return `${i},${j}`; }
+
+        function nwComputeTotalCells(model) {
+            const rows = Math.max(0, model.dp.length - 1);
+            const cols = Math.max(0, (model.dp[0]?.length ?? 0) - 1);
+            return rows * cols;
+        }
+
+        function nwAdvanceCell(model, i, j) {
+            // advance row-major across [1..n]x[1..m]
+            const n = model.dp.length - 1;
+            const m = model.dp[0].length - 1;
+
+            if (i > n) return { i: n + 1, j: m + 1, done: true };
+
+            let ni = i;
+            let nj = j + 1;
+            if (nj > m) {
+                ni = i + 1;
+                nj = 1;
+            }
+            const done = ni > n;
+            return { i: ni, j: nj, done };
+        }
+
+        function nwStartPractice() {
+            if (!nwModel) {
+                nwBuildModel();
+                if (!nwModel) return; // validation failed
+            }
+
+            nwHidden = new Set();
+            for (let i = 1; i < nwModel.dp.length; i++) {
+                for (let j = 1; j < nwModel.dp[i].length; j++) {
+                    nwHidden.add(nwKey(i, j));
+                }
+            }
+
+            nwPracticeActive = true;
+            nwCompletedCells = new Set();
+            nwProgress = {
+                i: 1,
+                j: 1,
+                correct: 0,
+                total: nwComputeTotalCells(nwModel),
+            };
+
+            nwAlignment.textContent = '(run Show traceback)';
+            nwRender(nwModel, { hiddenCells: nwHidden });
+            nwSetQuizCell(nwKey(nwProgress.i, nwProgress.j));
+        }
+
+        const NW_DIR_LABEL = { D: 'Diagonal', U: 'Up', L: 'Left' };
+
+        function nwSetQuizCell(key) {
+            if (!nwModel) return;
+            if (!nwPracticeActive) return;
+
+            const [iStr, jStr] = key.split(',');
+            const i = Number(iStr);
+            const j = Number(jStr);
+
+            const answerValue = nwModel.dp[i][j];
+
+            // Only allow the current cell
+            if (i !== nwProgress.i || j !== nwProgress.j) return;
+
+            nwQuiz.innerHTML = `
+                <div style="margin-bottom: 8px;">
+                    <strong>Progress:</strong> ${nwProgress.correct}/${nwProgress.total}
+                </div>
+                <div style="margin-bottom: 10px;">
+                    Cell <code>[${i},${j}]</code> — enter DP value
+                </div>
+            `;
+
+            const row = document.createElement('div');
+            row.className = 'nw-quiz-row';
+
+            const valInput = document.createElement('input');
+            valInput.type = 'number';
+            valInput.className = 'nw-quiz-input';
+            valInput.placeholder = 'DP value';
+
+            row.appendChild(valInput);
+
+            const buttons = document.createElement('div');
+            buttons.className = 'nw-quiz-buttons';
+
+            const checkBtn = document.createElement('button');
+            checkBtn.type = 'button';
+            checkBtn.className = 'nw-quiz-check';
+            checkBtn.textContent = 'Check';
+
+            const revealBtn = document.createElement('button');
+            revealBtn.type = 'button';
+            revealBtn.className = 'nw-quiz-reveal';
+            revealBtn.textContent = 'Reveal';
+
+            buttons.appendChild(checkBtn);
+            buttons.appendChild(revealBtn);
+
+            const feedback = document.createElement('div');
+            feedback.className = 'nw-quiz-feedback';
+
+            function markCellCompleteAndAdvance() {
+                if (nwCompletedCells.has(key)) return;
+                nwCompletedCells.add(key);
+                nwHidden.delete(key);
+                nwProgress.correct = Math.min(nwProgress.correct + 1, nwProgress.total);
+                nwRender(nwModel, { hiddenCells: nwHidden, quizCell: nwKey(nwProgress.i, nwProgress.j) });
+                const next = nwAdvanceCell(nwModel, nwProgress.i, nwProgress.j);
+                nwProgress.i = next.i;
+                nwProgress.j = next.j;
+                if (next.done || nwProgress.correct >= nwProgress.total) {
+                    nwProgress.correct = nwProgress.total;
+                    feedback.textContent = `Completed all cells (${nwProgress.correct}/${nwProgress.total}).`;
+                    feedback.className = 'nw-quiz-feedback nw-ok';
+                    nwPracticeActive = false;
+                    checkBtn.disabled = true;
+                    revealBtn.disabled = true;
+                    nwRender(nwModel); // Remove highlight
+                    return;
+                }
+                nwSetQuizCell(nwKey(nwProgress.i, nwProgress.j));
+            }
+
+            checkBtn.addEventListener('click', () => {
+                if (nwCompletedCells.has(key)) return;
+                const guessValRaw = valInput.value;
+                const guessVal = Number(guessValRaw);
+                if (!guessValRaw || !Number.isFinite(guessVal)) {
+                    feedback.textContent = 'Enter a numeric DP value.';
+                    feedback.className = 'nw-quiz-feedback nw-warn';
+                    return;
+                }
+                if (guessVal === answerValue) {
+                    feedback.textContent = 'Correct.';
+                    feedback.className = 'nw-quiz-feedback nw-ok';
+                    markCellCompleteAndAdvance();
+                } else {
+                    feedback.textContent = `Not quite. Try again.`;
+                    feedback.className = 'nw-quiz-feedback nw-bad';
+                }
+            });
+
+            revealBtn.addEventListener('click', () => {
+                if (nwCompletedCells.has(key)) return;
+                feedback.textContent = `Answer: ${answerValue}`;
+                feedback.className = 'nw-quiz-feedback nw-warn';
+                markCellCompleteAndAdvance();
+            });
+
+            nwQuiz.appendChild(row);
+            nwQuiz.appendChild(buttons);
+            nwQuiz.appendChild(feedback);
+            valInput.focus();
+            // Highlight the cell in the matrix
+            nwRender(nwModel, { hiddenCells: nwHidden, quizCell: key });
+        }
+
+        nwBuild?.addEventListener('click', nwBuildModel);
+        nwPractice?.addEventListener('click', nwStartPractice);
+
+        nwTraceback?.addEventListener('click', () => {
+            if (!nwModel) {
+                nwBuildModel();
+                if (!nwModel) return;
+            }
+            const path = nwPath(nwModel);
+            const tb = nwDoTraceback(nwModel);
+            nwRender(nwModel, { highlightPath: path, hiddenCells: nwHidden });
+            nwAlignment.textContent = `Score: ${tb.score}\n\n${tb.alA}\n${tb.mid}\n${tb.alB}`;
+        });
+
+        nwMatrix?.addEventListener('click', (e) => {
+            if (!nwModel) return;
+            const td = e.target?.closest?.('td');
+            if (!td) return;
+            const key = td.dataset.cell;
+            if (!key) return;
+
+            // Only allow clicking the *current* practice cell
+            if (!nwPracticeActive) return;
+            if (key !== nwKey(nwProgress.i, nwProgress.j)) return;
+            if (!nwHidden.has(key)) return;
+
+            nwSetQuizCell(key);
+        });
+
+        try {
+            nwBuildModel();
+        } catch (e) {
+            nwSetError(`Failed to render matrix: ${e?.message ?? e}`);
+        }
+    </script>
+</body>
+</html>
