@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.1.6/dist/purify.min.js"></script>
 </head>
 <body>
     <header class="navbar">
@@ -180,29 +182,48 @@
             return messageDiv;
         }
 
-        async function typeMessage(element, text, speed = 20) {
-            return new Promise(resolve => {
-                element.textContent = '';
-                element.classList.remove('typing');
-                let index = 0;
-                
-                function type() {
-                    if (index < text.length) {
-                        element.textContent += text.charAt(index);
-                        index++;
-                        setTimeout(type, speed);
-                    } else {
-                        resolve();
-                    }
+        function renderAssistantMessage(element, text) {
+            const rawHtml = marked.parse(text);
+            element.innerHTML = DOMPurify.sanitize(rawHtml);
+        }
+
+        let isSending = false;
+
+        function extractDisplayAnswer(answerValue) {
+            if (typeof answerValue !== "string") return "No answer returned.";
+
+            const raw = answerValue.trim();
+            if (!raw) return "No answer returned.";
+
+            // Remove markdown code fences like ```json ... ```
+            const unfenced = raw
+                .replace(/^```json\s*/i, "")
+                .replace(/^```\s*/i, "")
+                .replace(/\s*```$/, "")
+                .trim();
+
+            // If model returned JSON text, extract parsed.answer
+            try {
+                const parsed = JSON.parse(unfenced);
+                if (parsed && typeof parsed.answer === "string" && parsed.answer.trim()) {
+                    return parsed.answer.trim();
                 }
-                
-                type();
-            });
+            } catch (e) {
+                // Not JSON, fall through
+            }
+
+            // Plain text fallback
+            return raw;
         }
 
         async function sendMessage() {
+            if (isSending) return;
+
             const message = messageInput.value.trim();
             if (!message) return;
+
+            isSending = true;
+            sendButton.disabled = true;
 
             // Remove welcome message on first interaction
             if (!firstMessageSent) {
@@ -225,16 +246,27 @@
                     body: JSON.stringify({ message: message, session_id: sessionId, topic: selectedTopic }),
                 });
                 const data = await response.json();
+
+                if (data.cached) {
+                    console.log("Cache Hit")
+                }
                 
                 // Remove typing element and add typed response
                 typingElement.remove();
                 const responseElement = addMessage('', 'assistant');
                 console.log(message)
                 console.log(selectedTopic)
-                await typeMessage(responseElement, data.answer);
+                console.log(data)
+                const displayAnswer = extractDisplayAnswer(data.answer);
+                renderAssistantMessage(responseElement, displayAnswer);
             } catch (error) {
                 const errorElement = addMessage('', 'assistant');
-                await typeMessage(errorElement, 'Error: Could not send message.');
+                const displayAnswer = extractDisplayAnswer(data.answer);
+                renderAssistantMessage(responseElement, displayAnswer);
+            } finally {
+                isSending = false;
+                sendButton.disabled = false;
+                updateSendButtonState();
             }
         }
 
