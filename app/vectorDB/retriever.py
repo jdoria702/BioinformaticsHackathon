@@ -190,3 +190,30 @@ class ChromaRetriever:
                 seen.add(n)
                 unique.append(n)
         return unique
+
+    # List all files belonging to a session including metadata:
+    def list_session_files_detailed(self, session_id: str) -> List[Dict]:
+        """List unique uploaded files for a session with basic metadata."""
+        result = self._collection.get(where={"session_id": session_id}, include=["metadatas"])
+        metadatas = result.get("metadatas") or []
+
+        files: Dict[str, Dict] = {}
+        for md in metadatas:
+            if not md:
+                continue
+            stored = md.get("stored_filename")
+            if not stored:
+                continue
+            if stored not in files:
+                files[stored] = {
+                    "stored_filename": stored,
+                    "original_filename": md.get("original_filename"),
+                    "file_hash": md.get("file_hash"),
+                    "file_type": md.get("file_type"),
+                }
+        return list(files.values())
+    
+    # Delete file for a session within the collection:
+    def delete_session_file(self, session_id: str, stored_filename: str) -> None:
+        """Delete all vectors belonging to a specific uploaded file within a session."""
+        self.delete_where({"session_id": session_id, "stored_filename": stored_filename})

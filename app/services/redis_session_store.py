@@ -98,3 +98,11 @@ class RedisSessionStore:
         pipe.delete(self._meta_key(session_id))
         pipe.delete(self._files_key(session_id))
         pipe.execute()
+
+    # Remove a specific file from Redis store:
+    def remove_file(self, session_id: str, stored_filename: str) -> None:
+        files_key = self._files_key(session_id)
+        pipe = self._r.pipeline()
+        pipe.srem(files_key, stored_filename)
+        pipe.expire(files_key, self._ttl)
+        pipe.execute()

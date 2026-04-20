@@ -356,6 +356,7 @@ def upload():
 
         # Prefer upsert if available (avoids duplicate-id errors):
         try:
+            logger.info("Performing upsert of document chunks...")
             retriever._collection.upsert(
                 documents=chunks,
                 metadatas=metadatas,
@@ -413,3 +414,94 @@ def upload():
             os.remove(stored_path)
 
         return jsonify({"error": "Failed to ingest file."}), 500
+
+# Endpoint that returns all files belonging to user session:
+@api_bp.route("/session/files", methods=["GET"])
+def list_session_files():
+    session_id = request.args.get("session_id")
+    required = _require_session_id(session_id)
+    if required:
+        return required
+
+    # Keep session alive while user manages context:
+    _touch_session(session_id)
+
+    # Prefer Redis list, fall back to Chroma metadata:
+    files = []
+    if redis_sessions is not None:
+        try:
+            stored = redis_sessions.list_files(session_id)
+            # Return objects for UI convenience:
+            files = [{"stored_filename": s} for s in stored]
+        except Exception:
+            logger.exception("Failed to list session files from Redis (session_id=%s)", session_id)
+
+    if not files:
+        try:
+            files = retriever.list_session_files_detailed(session_id)
+        except Exception:
+            logger.exception("Failed to list session files from Chroma (session_id=%s)", session_id)
+            return jsonify({"error": "Failed to list session files."}), 500
+
+    return jsonify({"session_id": session_id, "files": files})
+
+# Allow a user to delete files from the session so they can modify retrieval context:
+@api_bp.route("/session/files", methods=["DELETE"])
+def delete_session_file():
+    data = request.get_json(silent=True) or {}
+    session_id = data.get("session_id")
+    stored_filename = data.get("stored_filename")
+
+    required = _require_session_id(session_id)
+    if required:
+        return required
+
+    if not stored_filename:
+        return jsonify({"error": "stored_filename is required"}), 400
+
+    _touch_session(session_id)
+
+    uploads_dir = os.getenv("UPLOADS_DIR", "uploads")
+
+    # 1) Delete file on disk:
+    deleted_file = False
+    try:
+        path = os.path.join(uploads_dir, stored_filename)
+        if os.path.exists(path):
+            os.remove(path)
+            deleted_file = True
+    except Exception:
+        logger.exception(
+            "Failed to delete uploaded file on disk (session_id=%s stored_filename=%s)",
+            session_id,
+            stored_filename,
+        )
+
+    # 2) Delete vectors for this file within the session:
+    try:
+        retriever.delete_session_file(session_id=session_id, stored_filename=stored_filename)
+    except Exception:
+        logger.exception(
+            "Failed to delete vectors for session file (session_id=%s stored_filename=%s)",
+            session_id,
+            stored_filename,
+        )
+        return jsonify({"error": "Failed to delete vectors for file."}), 500
+
+    # 3) Remove from Redis file set:
+    if redis_sessions is not None:
+        try:
+            redis_sessions.remove_file(session_id, stored_filename)
+        except Exception:
+            logger.exception(
+                "Failed to remove stored_filename from Redis (session_id=%s stored_filename=%s)",
+                session_id,
+                stored_filename,
+            )
+
+    return jsonify({
+        "status": "ok",
+        "session_id": session_id,
+        "stored_filename": stored_filename,
+        "deleted_from_disk": deleted_file,
+    })
