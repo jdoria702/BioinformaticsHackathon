@@ -123,7 +123,7 @@ class ChromaRetriever:
         )
 
         # Chroma returns a lists-of-lists:
-        documents= (result.get("documents") or [[]])[0]
+        documents = (result.get("documents") or [[]])[0]
         metadatas = (result.get("metadatas") or [[]])[0]
         distances = (result.get("distances") or [[]])[0]
 
@@ -154,3 +154,39 @@ class ChromaRetriever:
         logger.info("Query returned %d chunks", len(out))
         
         return out
+    
+    # Delete documents from a specific location in our document database:
+    def delete_where(self, where: Dict) -> None:
+        """Delete documents matching a Chroma 'where' filter."""
+        logger.info("Deleting from Chroma where=%s", where)
+        self._collection.delete(where=where)
+
+    # Delete all documents for a particular session ID:
+    def delete_session(self, session_id: str) -> None:
+        """Delete all documents associated with a session_id."""
+        self.delete_where({"session_id": session_id})
+
+    # List all files uploaded for a particular session:
+    def list_session_uploaded_files(self, session_id: str) -> List[str]:
+        """Return stored filenames referenced by Chroma metadata for a session."""
+        # Chroma doesn't support a pure metadata-only scan efficiently; we fetch ids with where-filter.
+        # Use include=['metadatas'] and no embeddings.
+        result = self._collection.get(where={"session_id": session_id}, include=["metadatas"])
+        metadatas = result.get("metadatas") or []
+
+        out: List[str] = []
+        for md in metadatas:
+            if not md:
+                continue
+            name = md.get("stored_filename")
+            if name:
+                out.append(name)
+
+        # de-dup while preserving order:
+        seen = set()
+        unique = []
+        for n in out:
+            if n not in seen:
+                seen.add(n)
+                unique.append(n)
+        return unique
