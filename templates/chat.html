@@ -52,6 +52,14 @@
                         <line x1="12" y1="3" x2="12" y2="15"></line>
                     </svg>
                 </button>
+                <button id="session-files-button" type="button" aria-label="View files">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="8" y1="13" x2="16" y2="13"></line>
+                        <line x1="8" y1="17" x2="16" y2="17"></line>
+                    </svg>
+                </button>
             </div>
         </section>
     </main>
@@ -70,6 +78,7 @@
         const uploadActions = document.getElementById('upload-actions');
         const confirmUploadButton = document.getElementById('confirm-upload-button');
         const cancelUploadButton = document.getElementById('cancel-upload-button');
+        const sessionFilesButton = document.getElementById('session-files-button');
         
         const promptSuggestions = {
             genome_assembly: [
@@ -150,6 +159,190 @@
             notificationContainer.textContent = 'Upload canceled.';
             uploadActions.style.display = 'none';
         });
+
+        sessionFilesButton.addEventListener('click', async () => {
+            const existing = document.getElementById('session-files-modal-overlay');
+            if (existing) {
+                existing.remove();
+            }
+
+            try {
+                const response = await fetch(`/api/session/files?session_id=${encodeURIComponent(sessionId)}`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    const message = data.error || 'Failed to fetch session files.';
+                    notificationContainer.textContent = message;
+                    return;
+                }
+
+                const files = Array.isArray(data.files) ? data.files : [];
+                openSessionFilesModal(files);
+            } catch (error) {
+                notificationContainer.textContent = 'Failed to fetch session files.';
+            }
+        })
+
+        function openSessionFilesModal(files) {
+            const overlay = document.createElement('div');
+            overlay.id = 'session-files-modal-overlay';
+            overlay.style.position = 'fixed';
+            overlay.style.inset = '0';
+            overlay.style.backgroundColor = 'rgba(0, 0, 0, 0.55)';
+            overlay.style.display = 'flex';
+            overlay.style.alignItems = 'center';
+            overlay.style.justifyContent = 'center';
+            overlay.style.zIndex = '1000';
+
+            const modal = document.createElement('div');
+            modal.style.width = 'min(92vw, 560px)';
+            modal.style.maxHeight = '70vh';
+            modal.style.overflowY = 'auto';
+            modal.style.backgroundColor = '#131a35';
+            modal.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+            modal.style.borderRadius = '16px';
+            modal.style.padding = '18px';
+            modal.style.color = '#ffffff';
+            modal.style.boxShadow = '0 20px 60px rgba(0, 0, 0, 0.35)';
+
+            const header = document.createElement('div');
+            header.style.display = 'flex';
+            header.style.alignItems = 'center';
+            header.style.justifyContent = 'space-between';
+            header.style.marginBottom = '12px';
+
+            const title = document.createElement('h3');
+            title.textContent = 'Session Files';
+            title.style.margin = '0';
+            title.style.fontSize = '1rem';
+
+            const closeButton = document.createElement('button');
+            closeButton.type = 'button';
+            closeButton.textContent = 'Close';
+            closeButton.style.backgroundColor = '#7A8499';
+            closeButton.style.color = '#ffffff';
+            closeButton.style.border = 'none';
+            closeButton.style.borderRadius = '999px';
+            closeButton.style.padding = '8px 12px';
+            closeButton.style.cursor = 'pointer';
+
+            header.appendChild(title);
+            header.appendChild(closeButton);
+            modal.appendChild(header);
+
+            if (!files.length) {
+                const emptyState = document.createElement('p');
+                emptyState.textContent = 'No files uploaded for this session.';
+                emptyState.style.margin = '0';
+                emptyState.style.color = '#A9B4C2';
+                modal.appendChild(emptyState);
+            } else {
+                const list = document.createElement('ul');
+                list.style.listStyle = 'none';
+                list.style.padding = '0';
+                list.style.margin = '0';
+
+                files.forEach((file) => {
+                    const item = document.createElement('li');
+                    item.style.padding = '10px 12px';
+                    item.style.border = '1px solid rgba(255, 255, 255, 0.1)';
+                    item.style.borderRadius = '10px';
+                    item.style.marginBottom = '8px';
+                    item.style.backgroundColor = 'rgba(255, 255, 255, 0.03)';
+                    item.style.display = 'flex';
+                    item.style.alignItems = 'center';
+                    item.style.justifyContent = 'space-between';
+                    item.style.gap = '12px';
+
+                    const name = file.original_filename || file.stored_filename || 'Unnamed file';
+                    const nameLabel = document.createElement('span');
+                    nameLabel.textContent = name;
+                    nameLabel.style.wordBreak = 'break-word';
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.type = 'button';
+                    deleteButton.textContent = 'x';
+                    deleteButton.style.width = '28px';
+                    deleteButton.style.height = '28px';
+                    deleteButton.style.borderRadius = '50%';
+                    deleteButton.style.border = 'none';
+                    deleteButton.style.cursor = 'pointer';
+                    deleteButton.style.backgroundColor = '#131a36';
+                    deleteButton.style.color = '#fbfeff';
+                    deleteButton.style.fontWeight = '700';
+                    deleteButton.style.flexShrink = '0';
+
+                    const storedFilename = file.stored_filename;
+                    if (!storedFilename) {
+                        deleteButton.disabled = true;
+                        deleteButton.style.opacity = '0.5';
+                        deleteButton.style.cursor = 'not-allowed';
+                    } else {
+                        deleteButton.addEventListener('click', async () => {
+                            deleteButton.disabled = true;
+
+                            try {
+                                const response = await fetch('/api/session/files', {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'Content-Type': 'application/json',
+                                    },
+                                    body: JSON.stringify({
+                                        session_id: sessionId,
+                                        stored_filename: storedFilename,
+                                    }),
+                                });
+
+                                const result = await response.json();
+
+                                if (!response.ok) {
+                                    const message = result.error || 'Failed to delete file.';
+                                    notificationContainer.textContent = message;
+                                    deleteButton.disabled = false;
+                                    return;
+                                }
+
+                                item.remove();
+                                notificationContainer.textContent = `Deleted: ${name}`;
+
+                                if (list.childElementCount === 0) {
+                                    const emptyState = document.createElement('p');
+                                    emptyState.textContent = 'No files uploaded for this session.';
+                                    emptyState.style.margin = '0';
+                                    emptyState.style.color = '#A9B4C2';
+                                    modal.appendChild(emptyState);
+                                    list.remove();
+                                }
+                            } catch (error) {
+                                notificationContainer.textContent = 'Failed to delete file.';
+                                deleteButton.disabled = false;
+                            }
+                        });
+                    }
+
+                    item.appendChild(nameLabel);
+                    item.appendChild(deleteButton);
+
+                    list.appendChild(item);
+                });
+
+                modal.appendChild(list);
+            }
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            function closeModal() {
+                overlay.remove();
+            }
+
+            closeButton.addEventListener('click', closeModal);
+            overlay.addEventListener('click', (event) => {
+                if (event.target === overlay) {
+                    closeModal();
+                }
+            });
+        }
 
         function removeWelcomeMessage() {
             const welcomeMsg = document.getElementById('welcome-message');

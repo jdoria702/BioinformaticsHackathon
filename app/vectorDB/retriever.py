@@ -216,4 +216,6 @@ class ChromaRetriever:
     # Delete file for a session within the collection:
     def delete_session_file(self, session_id: str, stored_filename: str) -> None:
         """Delete all vectors belonging to a specific uploaded file within a session."""
-        self.delete_where({"session_id": session_id, "stored_filename": stored_filename})
+        self.delete_where({ 
+            "$and": [{"session_id": session_id}, {"stored_filename": stored_filename}]
+        })
