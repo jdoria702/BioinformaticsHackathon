@@ -51,7 +51,15 @@ def create_app():
     @app.route("/")
     def root():
         return render_template("index.html")
-    
+
+    @app.route("/demos")
+    def demos_page():
+        return render_template("demos.html")
+
+    @app.route("/demos/needleman-wunsch")
+    def needleman_wunsch_demo_page():
+        return render_template("nw_demo.html")
+
     @app.route("/chat")
     def chat_page():
         topic = request.args.get("topic", "sequence_alignment")

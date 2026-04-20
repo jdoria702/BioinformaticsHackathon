@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BioinfoAI Demos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <header class="navbar">
+        <a href="/" class="navbar-home-link">
+            <div class="navbar-brand">
+                <img src="{{ url_for('static', filename='images/BioinfoAIIcon.png') }}" alt="BioinfoAI icon" class="navbar-icon">
+                <span class="navbar-title">BioinfoAI</span>
+            </div>
+        </a>
+    </header>
+
+    <main class="home-page">
+        <div class="grid-topics">
+            <h2 class="intro-message" style="margin-top: 10vh;">Interactive Demos</h2>
+            <h3 class="description">Try hands-on bioinformatics mini-labs and test your knowledge.</h3>
+
+            <div class="demo-grid">
+                <div class="demo-card">
+                    <div class="demo-card-title">Needleman–Wunsch</div>
+                    <div class="demo-card-desc">
+                        Build and practice filling the global alignment DP matrix, then view traceback and the final alignment.
+                    </div>
+                    <div class="demo-card-actions">
+                        <a class="demo-button" href="/demos/needleman-wunsch">Open demo</a>
+                    </div>
+                </div>
+
+                <div class="demo-card demo-card-disabled">
+                    <div class="demo-card-title">Smith–Waterman</div>
+                    <div class="demo-card-desc">Local alignment demo (coming soon).</div>
+                    <div class="demo-card-actions">
+                        <span class="demo-button demo-button-disabled">Coming soon</span>
+                    </div>
+                </div>
+
+                <div class="demo-card demo-card-disabled">
+                    <div class="demo-card-title">BLAST intuition</div>
+                    <div class="demo-card-desc">Word hits → extension → scoring (coming soon).</div>
+                    <div class="demo-card-actions">
+                        <span class="demo-button demo-button-disabled">Coming soon</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style="margin-top: 28px;">
+                <a class="demo-link" href="/">← Back to topics</a>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
