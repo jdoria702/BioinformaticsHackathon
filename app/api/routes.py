@@ -1,6 +1,7 @@
 import logging
 import os
 import uuid
+import time
 
 from flask import Blueprint, render_template, request, jsonify
 from werkzeug.utils import secure_filename
@@ -14,6 +15,16 @@ logger = logging.getLogger(__name__)
 
 # Create a Flask blueprint that we can later register with our main app (app.py):
 api_bp = Blueprint("api", __name__)
+
+# cache_key: -> { "answer": ..., "timestamp": ...}
+response_cache = {}
+
+# Expire cache after 1 hour
+CACHE_TTL = 60 * 60
+
+# Normalize queries so that strings are case insensitive
+def normalize_query(text: str) -> str:
+    return " ".join(text.lower().strip().split())
 
 # Initialize the agent for chat endpoints (this needs to fail-fast because it's a core component of our app):
 try:
@@ -35,11 +46,6 @@ except Exception:
     logger.exception("Retriever failed to initialize (fail-fast).")
     raise
 
-# Homepage:
-@api_bp.route("/")
-def index():
-    return render_template("index.html")
-
 # Simple health check to see if the application is running and functioning properly:
 @api_bp.route("/health", methods=["GET"])
 def health():
@@ -53,15 +59,42 @@ def chat():
     session_id = data.get("session_id", "default")
     topic = data.get("topic", "sequence_alignment")
 
+    normalized_message = normalize_query(message)
+    cache_key = f"{session_id}:{topic}:{normalized_message}"
+
     if not message:
         return jsonify({"error": "Message is required."}), 400
 
     try:
+        cached = response_cache.get(cache_key)
+
+        # Cache hit and not expired
+        if cached and time.time() - cached["timestamp"] < CACHE_TTL:
+            return jsonify({
+                "answer": cached["answer"],
+                "cached": True
+            })
+        
+        # Cache hit but time expired
+        if cached:
+            del response_cache[cache_key]
+
+
+        # New request, call agent and store result in cache
         result = agent.respond(
             user_message=message,
             session_id=session_id,
             topic=topic
         )
+
+        # Cache answer and timestamp
+        answer = result.get("answer", "")
+        if answer:
+            response_cache[cache_key] = {
+                "answer": answer,
+                "timestamp": time.time()
+            }
+
         return jsonify(result)
     except Exception:
         logger.exception("Error while handling /chat (session_id=%s, topic=%s)", session_id, topic)

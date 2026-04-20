@@ -50,3 +50,8 @@ class LessonService:
             formatted.append(f"[source={c.source} score={c.score:.3f}]\n{c.text}")
 
         return "\n\n".join(formatted)
+    
+    # Create a second retriever
+    ## change the collection name
+
+    
