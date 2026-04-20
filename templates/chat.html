@@ -189,6 +189,33 @@
 
         let isSending = false;
 
+        function extractDisplayAnswer(answerValue) {
+            if (typeof answerValue !== "string") return "No answer returned.";
+
+            const raw = answerValue.trim();
+            if (!raw) return "No answer returned.";
+
+            // Remove markdown code fences like ```json ... ```
+            const unfenced = raw
+                .replace(/^```json\s*/i, "")
+                .replace(/^```\s*/i, "")
+                .replace(/\s*```$/, "")
+                .trim();
+
+            // If model returned JSON text, extract parsed.answer
+            try {
+                const parsed = JSON.parse(unfenced);
+                if (parsed && typeof parsed.answer === "string" && parsed.answer.trim()) {
+                    return parsed.answer.trim();
+                }
+            } catch (e) {
+                // Not JSON, fall through
+            }
+
+            // Plain text fallback
+            return raw;
+        }
+
         async function sendMessage() {
             if (isSending) return;
 
@@ -229,10 +256,13 @@
                 const responseElement = addMessage('', 'assistant');
                 console.log(message)
                 console.log(selectedTopic)
-                renderAssistantMessage(responseElement, data.answer);
+                console.log(data)
+                const displayAnswer = extractDisplayAnswer(data.answer);
+                renderAssistantMessage(responseElement, displayAnswer);
             } catch (error) {
                 const errorElement = addMessage('', 'assistant');
-                renderAssistantMessage(errorElement, 'Error: Could not send message.');
+                const displayAnswer = extractDisplayAnswer(data.answer);
+                renderAssistantMessage(responseElement, displayAnswer);
             } finally {
                 isSending = false;
                 sendButton.disabled = false;
