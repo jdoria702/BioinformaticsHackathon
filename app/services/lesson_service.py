@@ -47,7 +47,11 @@ class LessonService:
 
         formatted = []
         for c in chunks:
-            formatted.append(f"[source={c.source} score={c.score:.3f}]\n{c.text}")
+            md = c.metadata or {}
+            filename = md.get("original_filename") or md.get("source") or "unknown"
+            chunk_index = md.get("chunk_index", md.get("block_index", "?"))
+            citation = f"{filename}#chunk{chunk_index}"
+            formatted.append(f"[SOURCE: {citation} score={c.score:.3f}]\n{c.text}")
 
         return "\n\n".join(formatted)
     

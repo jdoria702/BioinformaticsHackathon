@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import logging
 
-from typing import List, Tuple, Union, Dict, Optional
+from typing import List, Tuple, Dict, Optional
 
 from PIL import Image
 import pytesseract
@@ -78,15 +78,16 @@ def extract_docx_blocks(path: str) -> List[str]:
 # Extract text from images using OCR:
 def extract_image_ocr_text(path: str) -> str:
     logger.info("Running OCR on image at %s...", path)
-
-    image = Image.open(path)
-    return pytesseract.image_to_string(image).strip()
+    try:
+        image = Image.open(path)
+        return pytesseract.image_to_string(image).strip()
+    except Exception:
+        logger.exception("OCR failed for image %s", path)
+        return ""
 
 # Describe an image and store the description using a multimodal model:
 def describe_image_with_model(path: str) -> str:
-    """
-    Uses Ollama + Moondream to generate an image description.
-    """
+    """Uses Ollama + Moondream to generate an image description."""
 
     logger.info("Generating image description for %s...", path)
 
@@ -120,15 +121,18 @@ def describe_image_with_model(path: str) -> str:
 
         return description
 
-    except Exception as e:
-        logger.error("Failed to generate image description: %s", e)
+    except requests.exceptions.ConnectionError:
+        logger.warning("Ollama not reachable at http://localhost:11434 (skipping image captioning)")
+        return ""
+    except Exception:
+        logger.exception("Failed to generate image description for %s", path)
         return ""
 
 # Helper function to extract image info in blocks:
 def extract_image_blocks(
-        path: str,
-        use_ocr: bool = True,
-        use_caption: bool = True,
+    path: str,
+    use_ocr: bool = True,
+    use_caption: bool = True,
 ) -> List[str]:
     logger.info(
         "Extracting image blocks from %s (ocr=%s, caption=%s)",
@@ -147,10 +151,13 @@ def extract_image_blocks(
     
     # Vision captioning extraction:
     if use_caption:
-        caption = describe_image_with_model(path).strip()
+        caption = describe_image_with_model(path)
         if caption:
             parts.append(f"IMAGE_DESCRIPTION: {caption}")
-    
+
+    if not parts:
+        logger.warning("No text extracted from image %s (ocr=%s, caption=%s)", path, use_ocr, use_caption)
+
     logger.info("Extracted %d text blocks from image", len(parts))
     return parts
 

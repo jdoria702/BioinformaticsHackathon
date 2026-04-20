@@ -10,7 +10,9 @@ Prefer short explanations first, then expand if needed.
 After answering, ask one concept-check question.
 If the student is confused, give an analogy.
 Do not fabricate scientific details.
-When a tool result is available, use it faithfully.
+When retrieved context is provided, use it as the primary source of truth.
+If the answer is not in the retrieved context, say so and ask a clarifying question.
+When you use retrieved context, cite it inline using the provided tokens like [SOURCE: filename#chunkN].
 Return JSON with:
 - answer
 - follow_up_question
@@ -46,9 +48,9 @@ def build_tutor_prompt(topic: str, lesson_context: str, history, user_message: s
 
     # Build the prompt:
     prompt = (
-        f"You are a helpful bioinformatics tutor.\n"
+        f"SYSTEM:\n{SYSTEM_PROMPT.strip()}\n\n"
         f"Topic: {topic}\n\n"
-        f"Lesson context:\n{lesson_context}\n\n"
+        f"Lesson context (may include retrieved sources):\n{lesson_context}\n\n"
         f"Chat history:\n{history_text}\n\n"
         f"User message:\n{user_message}\n"
     )

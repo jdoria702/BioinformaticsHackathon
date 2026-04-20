@@ -50,9 +50,12 @@ class BioTutorAgent:
         logger.debug("Generating LLM response...")
         llm_result = self.llm_service.generate(prompt)
 
-        # Update the chat session:
-        logger.debug("Appending messages to session...")
-        self.session_service.append(session_id, "user", user_message)
-        self.session_service.append(session_id, "assistant", llm_result["answer"])
+        # Update chat history within the session.
+        try:
+            logger.debug("Appending messages to session...")
+            self.session_service.append(session_id, "user", user_message)
+            self.session_service.append(session_id, "assistant", llm_result.get("answer", ""))
+        except Exception:
+            logger.exception("Failed to append chat history (session_id=%s)", session_id)
 
         return llm_result
