@@ -13,6 +13,9 @@ from app.api.routes import api_bp
 # Create a logger for later debugging:
 logger = logging.getLogger(__name__)
 
+# Load Redis:
+redis_url = os.getenv("REDIS_URL")
+
 def _configure_logging():
     """
     Use this function to configure app-wide logging at startup.
